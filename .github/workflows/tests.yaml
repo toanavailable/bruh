@@ -1,0 +1,78 @@
+name: "Run tests"
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "windows-latest", "macos-latest"]
+        # Quoted on purpose: unquoted 3.10 is read by YAML as the number 3.1
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip" # Caching pip dependencies
+          cache-dependency-path: |
+            requirements.txt
+            requirements_tests.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements_tests.txt
+
+      # Exercise 10: enable these two steps once the data is tracked with DVC
+      # and the GDRIVE_CREDENTIALS_DATA secret has been added to the repository.
+      # - uses: iterative/setup-dvc@v1
+      # - name: Get data
+      #   run: dvc pull
+      #   env:
+      #     GDRIVE_CREDENTIALS_DATA: ${{ secrets.GDRIVE_CREDENTIALS_DATA }}
+
+      - name: Test with pytest
+        run: coverage run -m pytest -v
+
+      - name: Generate coverage report
+        run: |
+          coverage report
+          coverage xml
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload coverage report as artifact
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  # Single status check that summarises the whole matrix, so the branch
+  # ruleset only needs to require one check instead of nine.
+  tests-passed:
+    name: tests-passed
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check matrix result
+        run: test "${{ needs.build.result }}" = "success"
