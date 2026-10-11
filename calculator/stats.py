@@ -14,6 +14,13 @@ def mean(values: Sequence[float]) -> float:
     return float(np.mean(values))
 
 
+def median(values: Sequence[float]) -> float:
+    """Return the median of ``values``."""
+    if len(values) == 0:
+        raise ValueError("median() requires at least one value")
+    return float(np.median(values))
+
+
 def normalize(values: Sequence[float]) -> list[float]:
     """Scale ``values`` linearly into the range [0, 1]."""
     if len(values) == 0:

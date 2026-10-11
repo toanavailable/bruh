@@ -1,6 +1,6 @@
 import pytest
 
-from calculator import mean, normalize
+from calculator import mean, median, normalize
 
 
 def test_mean():
@@ -10,6 +10,16 @@ def test_mean():
 def test_mean_empty_raises():
     with pytest.raises(ValueError):
         mean([])
+
+
+def test_median():
+    assert median([5, 1, 3]) == 3.0
+    assert median([1, 2, 3, 4]) == 2.5
+
+
+def test_median_empty_raises():
+    with pytest.raises(ValueError):
+        median([])
 
 
 def test_normalize():
